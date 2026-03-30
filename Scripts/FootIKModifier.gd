@@ -1,31 +1,66 @@
 extends SkeletonModifier3D
 class_name FootIKModifier
 
+## The root node of the player character.
 @export var player_mesh: Node3D
+## The skeleton that this IK modifier will manipulate.
 @export var skeleton: Skeleton3D
 
+@export_group("Raycasts")
+## Raycast starting from the right heel to detect floor height.
 @export var right_heel_ray: RayCast3D
+## Raycast starting from the right toe to detect floor slope/angle.
 @export var right_toe_ray:  RayCast3D
+## Raycast starting from the left heel to detect floor height.
 @export var left_heel_ray:  RayCast3D
+## Raycast starting from the left toe to detect floor slope/angle.
 @export var left_toe_ray:   RayCast3D
 
+@export_group("Bone Names")
+## The name of the Hips/Pelvis bone.
 @export var bone_hips        := "Hips"
+## The name of the right thigh (upper leg) bone.
 @export var bone_right_thigh := "RightUpLeg"
+## The name of the right knee (lower leg) bone.
 @export var bone_right_knee  := "RightLeg"
+## The name of the right foot bone.
 @export var bone_right_foot  := "RightFoot"
+## The name of the right toe bone.
 @export var bone_right_toe   := "RightToeBase"
+## The name of the left thigh (upper leg) bone.
 @export var bone_left_thigh  := "LeftUpLeg"
+## The name of the left knee (lower leg) bone.
 @export var bone_left_knee   := "LeftLeg"
+## The name of the left foot bone.
 @export var bone_left_foot   := "LeftFoot"
+## The name of the left toe bone.
 @export var bone_left_toe    := "LeftToeBase"
 
-@export var ground_snap       : float = 0.015   # sole hover above hit point
-@export var hip_max_drop      : float = 0.55    # max hip sink in world meters
-@export var hip_smooth_speed  : float = 8.0     # hip lerp speed
-@export var knee_pole_forward : float = 0.5     # pole distance (× upper_len)
-@export var knee_outward_bias : float = 0.15    # slight outward knee spread
-@export var ray_length        : float = 2.0     # how far rays cast down
-@export var ray_start_offset  : float = 0.15    # ★ rays start THIS far above bone
+# ── Axis selection ──────────────────────────────────────────
+## Defines the local axes of the skeleton bones.
+enum Axis { X_POS, Y_POS, Z_POS, X_NEG, Y_NEG, Z_NEG }
+
+@export_group("Axis Settings")
+## Which LOCAL axis of the hip bone points forward.
+@export var forward_axis: Axis = Axis.Z_POS
+## Which LOCAL axis of the hip bone points right.
+@export var right_axis:   Axis = Axis.X_POS
+
+@export_group("IK Settings")
+## Small offset to keep the foot slightly above the collision point to prevent clipping.
+@export var ground_snap       : float = 0.015
+## The maximum distance the hips are allowed to drop when crouching on uneven terrain.
+@export var hip_max_drop      : float = 0.55
+## How quickly the hip height adjusts to new terrain (higher is faster).
+@export var hip_smooth_speed  : float = 8.0
+## How far forward the 'virtual' pole target is placed to guide knee bending.
+@export var knee_pole_forward : float = 0.6
+## Adds a slight outward angle to the knees to prevent a 'knock-kneed' look.
+@export var knee_outward_bias : float = 0.15
+## Total length of the floor-detection raycasts.
+@export var ray_length        : float = 2.0
+## Vertical offset above the bone where the raycast starts.
+@export var ray_start_offset  : float = 0.15
 
 var idx_hips    : int
 var idx_r_thigh : int
@@ -91,14 +126,47 @@ func _global_pose(bone_idx: int) -> Transform3D:
 	return xform
 
 
-# ═══════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════════
+# AXIS HELPERS — enum → Vector3 → world direction via hip bone
+# ═══════════════════════════════════════════════════════════════
+static func _axis_vec(a: Axis) -> Vector3:
+	match a:
+		Axis.X_POS: return Vector3(1, 0, 0)
+		Axis.Y_POS: return Vector3(0, 1, 0)
+		Axis.Z_POS: return Vector3(0, 0, 1)
+		Axis.X_NEG: return Vector3(-1, 0, 0)
+		Axis.Y_NEG: return Vector3(0, -1, 0)
+		Axis.Z_NEG: return Vector3(0, 0, -1)
+	return Vector3.FORWARD
+
+
+func _world_axes(skel_xform: Transform3D) -> Dictionary:
+	var hip_basis := (skel_xform * _global_pose(idx_hips)).basis
+	var fwd := (hip_basis * _axis_vec(forward_axis)).normalized()
+	var rgt := (hip_basis * _axis_vec(right_axis)).normalized()
+	# Strip vertical component from forward so knees don't tilt
+	fwd.y = 0.0
+	if fwd.length_squared() < 0.0001:
+		fwd = hip_basis * _axis_vec(forward_axis)
+	fwd = fwd.normalized()
+	rgt.y = 0.0
+	if rgt.length_squared() < 0.0001:
+		rgt = hip_basis * _axis_vec(right_axis)
+	rgt = rgt.normalized()
+	return {"fwd": fwd, "rgt": rgt}
+
+
+# ═══════════════════════════════════════════════════════════════
 # MAIN
-# ═══════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════════
 func _process_modification():
 	if not skeleton:
 		return
 
 	var skel_xform := skeleton.global_transform
+	var axes := _world_axes(skel_xform)
+	var char_fwd  : Vector3 = axes["fwd"]
+	var char_right: Vector3 = axes["rgt"]
 
 	_place_ray(right_heel_ray, idx_r_foot, skel_xform)
 	_place_ray(right_toe_ray,  idx_r_toe,  skel_xform)
@@ -107,31 +175,38 @@ func _process_modification():
 
 	if not _debug_printed:
 		_debug_printed = true
-		_print_debug(skel_xform)
+		_print_debug(skel_xform, char_fwd, char_right)
 
-	var r_target = _foot_target(right_heel_ray, right_toe_ray, idx_r_foot, skel_xform)
-	var l_target = _foot_target(left_heel_ray,  left_toe_ray,  idx_l_foot, skel_xform)
+	var r_target = _foot_target(right_heel_ray, right_toe_ray,
+								idx_r_foot, skel_xform, char_fwd)
+	var l_target = _foot_target(left_heel_ray,  left_toe_ray,
+								idx_l_foot, skel_xform, char_fwd)
 
 	_apply_hip_drop(r_target, l_target, skel_xform)
 
 	if r_target != null:
 		_solve_leg(idx_r_thigh, idx_r_knee, idx_r_foot,
-				   r_target, true, skel_xform)
+				   r_target, true, skel_xform, char_fwd, char_right)
+		_align_toe(idx_r_toe, skel_xform)
 	if l_target != null:
 		_solve_leg(idx_l_thigh, idx_l_knee, idx_l_foot,
-				   l_target, false, skel_xform)
+				   l_target, false, skel_xform, char_fwd, char_right)
+		_align_toe(idx_l_toe, skel_xform)
 
-	_debug_draw(skel_xform)
+	_debug_draw(skel_xform, char_fwd, char_right)
 
 
-func _print_debug(skel_xform: Transform3D):
+func _print_debug(skel_xform: Transform3D, fwd: Vector3, right: Vector3):
 	print("=== FootIK one-shot debug ===")
 	print("  skeleton pos: ", skeleton.global_position,
 		  "  scale Y: ", skel_xform.basis.get_scale().y)
 	var hip_basis := (skel_xform * _global_pose(idx_hips)).basis
-	print("  Hip world axes  X(right):", hip_basis.x.normalized(),
-		  "  Y(fwd):", hip_basis.y.normalized(),
-		  "  Z(up):", hip_basis.z.normalized())
+	print("  Hip local→world  X:", hip_basis.x.normalized(),
+		  "  Y:", hip_basis.y.normalized(),
+		  "  Z:", hip_basis.z.normalized())
+	print("  forward_axis enum:", forward_axis,
+		  "  right_axis enum:", right_axis)
+	print("  RESULTING forward:", fwd, "  right:", right)
 	for label in ["R heel", "R toe", "L heel", "L toe"]:
 		var ray: RayCast3D = null
 		match label:
@@ -143,56 +218,45 @@ func _print_debug(skel_xform: Transform3D):
 			var world_dir := ray.global_basis * ray.target_position
 			print("  ", label,
 				  "  pos:", ray.global_position,
-				  "  world_dir:", world_dir.normalized(),
+				  "  dir:", world_dir.normalized(),
 				  "  hit:", ray.is_colliding())
 			if ray.is_colliding():
 				print("    → ", ray.get_collision_point())
 
 
-# ═══════════════════════════════════════════════════════════
-# RAY PLACEMENT — start ABOVE foot bone to prevent clipping
-# ═══════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════════
+# RAY PLACEMENT
+# ═══════════════════════════════════════════════════════════════
 func _place_ray(ray: RayCast3D, bone_idx: int, skel_xform: Transform3D):
 	if not ray:
 		return
 	var bone_world := skel_xform * _global_pose(bone_idx).origin
-
-	# ★ Start ray above the foot bone so it never sits inside geometry
 	ray.global_position = bone_world + Vector3(0.0, ray_start_offset, 0.0)
 
-	# Force the ray to aim straight down in WORLD space,
-	# regardless of how the external Node3D parent is rotated
 	var world_down := Vector3(0.0, -ray_length, 0.0)
 	ray.target_position = ray.global_basis.inverse() * world_down
 
 	ray.force_raycast_update()
 
 
-# ═══════════════════════════════════════════════════════════
-# FOOT TARGET — build a Transform3D at the ground contact
-# ═══════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════════
+# FOOT TARGET
+# ═══════════════════════════════════════════════════════════════
 func _foot_target(heel_ray: RayCast3D, toe_ray: RayCast3D,
-				  foot_idx: int, skel_xform: Transform3D) -> Variant:
+				  foot_idx: int, skel_xform: Transform3D,
+				  char_fwd: Vector3) -> Variant:
 	if not heel_ray or not heel_ray.is_colliding():
 		return null
 
 	var heel_hit  := heel_ray.get_collision_point()
 	var surface_n := heel_ray.get_collision_normal()
 
-	# Compare hit Y against the actual foot bone (not the ray start)
 	var foot_world_y := (skel_xform * _global_pose(foot_idx).origin).y
-
-	# Safety: if hit is way above foot, foot is deeply clipped — skip
 	if heel_hit.y > foot_world_y + 0.1:
 		return null
 
 	var foot_pos := heel_hit + surface_n * ground_snap
 
-	# Character forward = hip bone Y axis (Y-forward skeleton)
-	var hip_basis := (skel_xform * _global_pose(idx_hips)).basis
-	var char_fwd  := hip_basis.y.normalized()
-
-	# Determine foot forward direction
 	var foot_fwd: Vector3
 	if toe_ray and toe_ray.is_colliding():
 		var raw := toe_ray.get_collision_point() - heel_hit
@@ -200,7 +264,6 @@ func _foot_target(heel_ray: RayCast3D, toe_ray: RayCast3D,
 	else:
 		foot_fwd = char_fwd
 
-	# Right-handed basis: X = right, Y = forward, Z = up (surface normal)
 	var right_v := foot_fwd.cross(surface_n)
 	if right_v.length_squared() < 0.0001:
 		right_v = char_fwd.cross(surface_n)
@@ -212,15 +275,14 @@ func _foot_target(heel_ray: RayCast3D, toe_ray: RayCast3D,
 	return Transform3D(Basis(right_v, foot_fwd, surface_n), foot_pos)
 
 
-# ═══════════════════════════════════════════════════════════
-# HIP DROP — world-Y → skeleton-local → parent-bone-local
-# ═══════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════════
+# HIP DROP
+# ═══════════════════════════════════════════════════════════════
 func _apply_hip_drop(r_target: Variant, l_target: Variant,
 					 skel_xform: Transform3D):
 	var r_delta := _drop_needed(r_target, idx_r_foot, skel_xform)
 	var l_delta := _drop_needed(l_target, idx_l_foot, skel_xform)
 
-	# Most-negative delta = the hip needs to drop the most
 	var target_world_offset := minf(r_delta, l_delta)
 	target_world_offset = clampf(target_world_offset, -hip_max_drop, 0.2)
 
@@ -231,13 +293,9 @@ func _apply_hip_drop(r_target: Variant, l_target: Variant,
 	if absf(_hip_offset) < 0.0001:
 		return
 
-	# Convert world-Y offset through two frames to reach bone-local space
 	var world_offset := Vector3(0.0, _hip_offset, 0.0)
-
-	# Frame 1: undo skeleton node scale & rotation
 	var skel_local := skel_xform.basis.inverse() * world_offset
 
-	# Frame 2: undo hip's parent bone rotation (if any)
 	var parent_idx := skeleton.get_bone_parent(idx_hips)
 	if parent_idx >= 0:
 		var parent_basis := _global_pose(parent_idx).basis.orthonormalized()
@@ -256,12 +314,13 @@ func _drop_needed(target: Variant, foot_idx: int,
 	return (target as Transform3D).origin.y - foot_world_y
 
 
-# ═══════════════════════════════════════════════════════════
-# TWO-BONE IK — with proper knee pole direction
-# ═══════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════════
+# TWO-BONE IK
+# ═══════════════════════════════════════════════════════════════
 func _solve_leg(thigh_idx: int, knee_idx: int, foot_idx: int,
 				target_world: Transform3D, is_right: bool,
-				skel_xform: Transform3D):
+				skel_xform: Transform3D,
+				char_fwd: Vector3, char_right: Vector3):
 
 	var skel_scale := skel_xform.basis.get_scale().y
 	var upper_len  := (r_upper_len if is_right else l_upper_len) * skel_scale
@@ -276,41 +335,29 @@ func _solve_leg(thigh_idx: int, knee_idx: int, foot_idx: int,
 	if dist < 0.0001:
 		return
 	var dir := to_target / dist
-
-	# Prevent hyperextension & near-zero edge cases
 	dist = clampf(dist, upper_len * 0.05, total_len * 0.98)
 
-	# ── Law of cosines ──
+	# Law of cosines
 	var cos_a := clampf(
 		(upper_len * upper_len + dist * dist - lower_len * lower_len)
 		/ (2.0 * upper_len * dist), -1.0, 1.0)
 	var angle_a := acos(cos_a)
 
-	# ── Knee pole direction ──
-	# Use hip bone axes (Y-forward, X-right skeleton)
-	var hip_basis  := (skel_xform * _global_pose(idx_hips)).basis
-	var char_fwd   := hip_basis.y.normalized()
-	var char_right := hip_basis.x.normalized()
-
-	# ★ Slight outward bias per side so knees don't collapse inward
+	# ── Knee pole ──
 	var outward := char_right * (1.0 if is_right else -1.0) * knee_outward_bias
-
-	# Combine forward + outward, then project onto plane ⊥ to leg direction
 	var pole_dir := char_fwd + outward
+
 	pole_dir -= dir * pole_dir.dot(dir)
 	if pole_dir.length_squared() < 0.0001:
-		pole_dir = skel_xform.basis.y.normalized()
+		pole_dir = Vector3.UP
 		pole_dir -= dir * pole_dir.dot(dir)
 	if pole_dir.length_squared() < 0.0001:
-		pole_dir = Vector3.UP if absf(dir.dot(Vector3.UP)) < 0.9 \
-				   else Vector3.RIGHT
+		pole_dir = Vector3.RIGHT
 	pole_dir = pole_dir.normalized()
 
-	# ★ Pole distance relative to upper leg length (not fixed world meters)
 	var pole_dist := upper_len * knee_pole_forward
 	var pole_pos  := (thigh_pos + foot_pos) * 0.5 + pole_dir * pole_dist
 
-	# Rotation plane normal
 	var to_pole := pole_pos - thigh_pos
 	var plane_n := dir.cross(to_pole)
 	if plane_n.length_squared() < 0.0001:
@@ -318,10 +365,9 @@ func _solve_leg(thigh_idx: int, knee_idx: int, foot_idx: int,
 			Vector3.UP if absf(dir.dot(Vector3.UP)) < 0.9 else Vector3.RIGHT)
 	plane_n = plane_n.normalized()
 
-	# Desired knee world position
 	var desired_knee_pos := thigh_pos + dir.rotated(plane_n, angle_a) * upper_len
 
-	# ── Apply rotations ──
+	# Apply rotations
 	var knee_cur_pos := skel_xform * _global_pose(knee_idx).origin
 	_rotate_bone_toward(thigh_idx, thigh_pos,
 						knee_cur_pos, desired_knee_pos, skel_xform)
@@ -331,13 +377,22 @@ func _solve_leg(thigh_idx: int, knee_idx: int, foot_idx: int,
 	_rotate_bone_toward(knee_idx, knee_new_pos,
 						foot_cur_pos, foot_pos, skel_xform)
 
-	# Foot surface alignment (full override — see below)
 	_rotate_foot_to_surface(foot_idx, target_world.basis, skel_xform)
 
 
-# ═══════════════════════════════════════════════════════════
-# BONE ROTATION HELPER — incremental axis-angle in parent space
-# ═══════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════════
+# TOE BONE RESET
+# ═══════════════════════════════════════════════════════════════
+func _align_toe(toe_idx: int, skel_xform: Transform3D):
+	var pose := skeleton.get_bone_pose(toe_idx)
+	var original_scale := pose.basis.get_scale()
+	pose.basis = Basis.IDENTITY.scaled(original_scale)
+	skeleton.set_bone_pose(toe_idx, pose)
+
+
+# ═══════════════════════════════════════════════════════════════
+# BONE ROTATION HELPER
+# ═══════════════════════════════════════════════════════════════
 func _rotate_bone_toward(bone_idx: int,
 						 bone_world: Vector3,
 						 child_cur: Vector3, child_des: Vector3,
@@ -353,7 +408,6 @@ func _rotate_bone_toward(bone_idx: int,
 	world_axis = world_axis.normalized()
 	var angle := from_dir.angle_to(to_dir)
 
-	# Axis into parent-bone-local space
 	var parent_idx := skeleton.get_bone_parent(bone_idx)
 	var parent_basis: Basis
 	if parent_idx >= 0:
@@ -370,70 +424,48 @@ func _rotate_bone_toward(bone_idx: int,
 	skeleton.set_bone_pose(bone_idx, pose)
 
 
-# ═══════════════════════════════════════════════════════════
-# FOOT SURFACE ALIGNMENT — ★ FULL OVERRIDE (not incremental)
-#
-# Why override instead of lerp:
-#   The incremental quaternion approach only partially corrects the
-#   foot angle each frame. If the animation has the foot tilted 40°
-#   and we only correct 15° per frame, the foot looks "perked up"
-#   permanently. Full override guarantees the sole is flat every frame.
-#
-# Why this is safe:
-#   _foot_target() returns null when no ground contact → we skip
-#   this function entirely → animation controls the foot in the air.
-#   The only visual transition is at the contact edge, where
-#   ground_snap provides a small natural buffer.
-# ═══════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════════
+# FOOT SURFACE ALIGNMENT
+# ═══════════════════════════════════════════════════════════════
 func _rotate_foot_to_surface(foot_idx: int, target_world_basis: Basis,
 							 skel_xform: Transform3D):
 	var parent_idx := skeleton.get_bone_parent(foot_idx)
-
-	# Get parent (knee) world transform AFTER all IK corrections
 	var parent_world_xform: Transform3D
 	if parent_idx >= 0:
 		parent_world_xform = skel_xform * _global_pose(parent_idx)
 	else:
 		parent_world_xform = skel_xform
 
-	# Derive the exact local basis needed so that:
-	#   parent_world.basis × local_basis = target_world_basis
 	var local_basis := parent_world_xform.basis.inverse() \
 					   * target_world_basis.orthonormalized()
 
 	var pose := skeleton.get_bone_pose(foot_idx)
 	var original_scale := pose.basis.get_scale()
-
-	# Full override — foot Z aligns to surface normal, guaranteed
 	pose.basis = local_basis.orthonormalized().scaled(original_scale)
 	skeleton.set_bone_pose(foot_idx, pose)
 
 
-# ═══════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════════
 # DEBUG DRAW
-# ═══════════════════════════════════════════════════════════
-func _debug_draw(skel_xform: Transform3D):
-	# Leg segments
+# ═══════════════════════════════════════════════════════════════
+func _debug_draw(skel_xform: Transform3D, fwd: Vector3, right: Vector3):
 	for pair in [[idx_r_thigh, idx_r_knee], [idx_r_knee, idx_r_foot],
 				 [idx_l_thigh, idx_l_knee], [idx_l_knee, idx_l_foot]]:
 		var a := skel_xform * _global_pose(pair[0]).origin
 		var b := skel_xform * _global_pose(pair[1]).origin
 		DebugDraw3D.draw_line(a, b, Color.YELLOW)
 
-	# Rays — show actual world direction
 	for ray in [right_heel_ray, right_toe_ray, left_heel_ray, left_toe_ray]:
 		if not ray:
 			continue
 		var world_end = ray.global_position + ray.global_basis * ray.target_position
 		DebugDraw3D.draw_line(ray.global_position, world_end, Color.GREEN)
-		# Small cyan sphere at ray start so you can see the offset
 		DebugDraw3D.draw_sphere(ray.global_position, 0.02, Color.CYAN)
 		if ray.is_colliding():
 			DebugDraw3D.draw_sphere(ray.get_collision_point(), 0.03, Color.RED)
 
-	# Hip axes for verification
-	var hip_w := skel_xform * _global_pose(idx_hips)
-	var hp := hip_w.origin
-	DebugDraw3D.draw_line(hp, hp + hip_w.basis.z * 0.3, Color.BLUE)   # Z = up
-	DebugDraw3D.draw_line(hp, hp + hip_w.basis.y * 0.3, Color.GREEN)  # Y = fwd
-	DebugDraw3D.draw_line(hp, hp + hip_w.basis.x * 0.3, Color.RED)    # X = right
+	# Forward = green, Right = red, Up = blue
+	var hp := (skel_xform * _global_pose(idx_hips)).origin
+	DebugDraw3D.draw_line(hp, hp + fwd * 0.4, Color.GREEN)
+	DebugDraw3D.draw_line(hp, hp + right * 0.3, Color.RED)
+	DebugDraw3D.draw_line(hp, hp + Vector3.UP * 0.3, Color.BLUE)
