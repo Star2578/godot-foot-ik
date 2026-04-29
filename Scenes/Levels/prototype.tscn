@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://coue2qehpn4fr"]
 
 [ext_resource type="Texture2D" uid="uid://b8q44ipg8a3cq" path="res://Assets/Textures/Black.png" id="1_hwes2"]
+[ext_resource type="PackedScene" uid="uid://cmfhcgg1b32b5" path="res://Scenes/test_interface.tscn" id="1_lkf0i"]
 [ext_resource type="Texture2D" uid="uid://doyodkg1ds7td" path="res://Assets/Textures/Sky.png" id="1_rrvcb"]
 [ext_resource type="PackedScene" uid="uid://cr2ersq7g6q6f" path="res://Scenes/Characters/player.tscn" id="2_1g73n"]
 [ext_resource type="Texture2D" uid="uid://gwt4mrbmdv01" path="res://Assets/Textures/Orange.png" id="2_087ax"]
@@ -56,6 +57,8 @@ data = PackedVector3Array(-12.5, 2.5, 2.5, 2.5, -2.5, 2.5, -2.5, -2.5, 2.5, -12.
 
 [node name="Prototype" type="Node3D" unique_id=376393720]
 
+[node name="Test_Interface" parent="." unique_id=1256170037 instance=ExtResource("1_lkf0i")]
+
 [node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1722610124]
 environment = SubResource("Environment_ctwiv")
 
@@ -68,6 +71,7 @@ directional_shadow_split_3 = 0.2
 directional_shadow_blend_splits = true
 
 [node name="Floor" type="MeshInstance3D" parent="." unique_id=1013451366]
+layers = 3
 mesh = SubResource("PlaneMesh_mmup0")
 
 [node name="StaticBody3D" type="StaticBody3D" parent="Floor" unique_id=659205982]
@@ -113,3 +117,4 @@ surface_material_override/0 = SubResource("StandardMaterial3D_pfpgv")
 shape = SubResource("ConcavePolygonShape3D_rit6o")
 
 [node name="Player" parent="." unique_id=1584071067 instance=ExtResource("2_1g73n")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.84937274, 0, 0)

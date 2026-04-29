@@ -283,8 +283,26 @@ func _apply_hip_drop(r_target: Variant, l_target: Variant,
 	var r_delta := _drop_needed(r_target, idx_r_foot, skel_xform)
 	var l_delta := _drop_needed(l_target, idx_l_foot, skel_xform)
 
-	var target_world_offset := minf(r_delta, l_delta)
-	target_world_offset = clampf(target_world_offset, -hip_max_drop, 0.2)
+	var target_world_offset: float
+
+	if r_target != null and l_target != null:
+		# Both feet have ground contact:
+		# Drop to the lower foot, but only rise to the average of both.
+		# This prevents over-dropping on one-sided slopes while allowing
+		# natural upward correction on raised terrain.
+		var lower  := minf(r_delta, l_delta)   # most negative = needs most drop
+		var avg    := (r_delta + l_delta) * 0.5
+		# If lower foot needs to drop, use that. If both need to rise, use average.
+		target_world_offset = lower if lower < 0.0 else avg
+	elif r_target != null:
+		target_world_offset = r_delta
+	elif l_target != null:
+		target_world_offset = l_delta
+	else:
+		target_world_offset = 0.0
+
+	# Symmetric clamp: allow equal rise and drop
+	target_world_offset = clampf(target_world_offset, -hip_max_drop, hip_max_drop)
 
 	var dt := get_process_delta_time()
 	_hip_offset = lerpf(_hip_offset, target_world_offset,

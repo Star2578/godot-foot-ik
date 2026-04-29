@@ -1,0 +1,32 @@
+[gd_scene format=3 uid="uid://cmfhcgg1b32b5"]
+
+[ext_resource type="Script" uid="uid://c0frrvqab5mcm" path="res://Scripts/test_interface.gd" id="1_fg40r"]
+
+[node name="Test_Interface" type="Control" unique_id=1256170037]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_fg40r")
+
+[node name="Panel" type="Panel" parent="." unique_id=78628371]
+custom_minimum_size = Vector2(300, 300)
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="StatusLabel" type="RichTextLabel" parent="Panel" unique_id=408275890]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+bbcode_enabled = true
+text = "FPS: 60
+IK Status: Baseline (No IK)
+"
