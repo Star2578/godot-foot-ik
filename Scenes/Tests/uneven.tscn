@@ -1,0 +1,141 @@
+[gd_scene format=3 uid="uid://ds30uvajgrmi"]
+
+[ext_resource type="PackedScene" uid="uid://cr2ersq7g6q6f" path="res://Scenes/Characters/player.tscn" id="1_7fom8"]
+[ext_resource type="PackedScene" uid="uid://cmfhcgg1b32b5" path="res://Scenes/test_interface.tscn" id="2_5jdfx"]
+
+[sub_resource type="Environment" id="Environment_q4otm"]
+background_mode = 2
+ambient_light_color = Color(1, 1, 1, 1)
+fog_enabled = true
+
+[sub_resource type="Gradient" id="Gradient_g153e"]
+offsets = PackedFloat32Array(0.2, 1)
+colors = PackedColorArray(1, 1, 1, 1, 0, 0, 0, 1)
+
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_q4otm"]
+noise_type = 2
+frequency = 0.03
+cellular_jitter = 3.0
+cellular_return_type = 0
+domain_warp_enabled = true
+domain_warp_type = 1
+domain_warp_amplitude = 50.0
+domain_warp_fractal_type = 2
+domain_warp_fractal_lacunarity = 1.5
+domain_warp_fractal_gain = 1.0
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_1aoan"]
+noise = SubResource("FastNoiseLite_q4otm")
+color_ramp = SubResource("Gradient_g153e")
+seamless = true
+
+[sub_resource type="Terrain3DMaterial" id="Terrain3DMaterial_71d8t"]
+_shader_parameters = {
+&"bias_distance": 512.0,
+&"blend_sharpness": 0.5,
+&"depth_blur": 0.0,
+&"enable_macro_variation": true,
+&"enable_projection": true,
+&"flat_terrain_normals": false,
+&"macro_variation1": Color(1, 1, 1, 1),
+&"macro_variation2": Color(1, 1, 1, 1),
+&"macro_variation_slope": 0.333,
+&"mipmap_bias": 1.0,
+&"noise1_angle": 0.0,
+&"noise1_offset": Vector2(0.5, 0.5),
+&"noise1_scale": 0.04,
+&"noise2_scale": 0.076,
+&"noise_texture": SubResource("NoiseTexture2D_1aoan"),
+&"projection_threshold": 0.8
+}
+show_checkered = true
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_nxusl"]
+transparency = 4
+cull_mode = 2
+vertex_color_use_as_albedo = true
+backlight_enabled = true
+backlight = Color(0.5, 0.5, 0.5, 1)
+distance_fade_mode = 1
+distance_fade_min_distance = 128.0
+distance_fade_max_distance = 96.0
+
+[sub_resource type="Terrain3DMeshAsset" id="Terrain3DMeshAsset_ytm02"]
+generated_type = 1
+height_offset = 0.5
+material_override = SubResource("StandardMaterial3D_nxusl")
+last_lod = 0
+last_shadow_lod = 0
+lod0_range = 128.0
+
+[sub_resource type="Terrain3DAssets" id="Terrain3DAssets_1phy5"]
+mesh_list = Array[Terrain3DMeshAsset]([SubResource("Terrain3DMeshAsset_ytm02")])
+
+[node name="testing_ground" type="Node3D" unique_id=236317595]
+
+[node name="Test_Interface" parent="." unique_id=1256170037 instance=ExtResource("2_5jdfx")]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1577976746]
+environment = SubResource("Environment_q4otm")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=2027969497]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.6786695, 0)
+shadow_enabled = true
+
+[node name="Terrain3D" type="Terrain3D" parent="." unique_id=153311146]
+data_directory = "res://terrain"
+material = SubResource("Terrain3DMaterial_71d8t")
+assets = SubResource("Terrain3DAssets_1phy5")
+show_checkered = true
+top_level = true
+metadata/_edit_lock_ = true
+
+[node name="Player" parent="." unique_id=38816863 instance=ExtResource("1_7fom8")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4378643, 0.3609606, -0.035384774)
+
+[node name="Skeleton3D" parent="Player/Mesh/Armature" parent_id_path=PackedInt32Array(38816863, 1867960763) index="0" unique_id=1940579]
+bones/0/position = Vector3(0.03518329, 1.5602349, -104.247955)
+bones/0/rotation = Quaternion(-0.6945857, 0.0019809036, -0.0013128278, 0.719406)
+bones/1/rotation = Quaternion(-0.07371303, -0.0022556754, -0.0047722002, 0.9972656)
+bones/2/rotation = Quaternion(0.012972432, -0.00399568, -0.0058304947, 0.9998909)
+bones/3/rotation = Quaternion(0.025853151, -0.00406833, -0.0057773017, 0.9996408)
+bones/4/rotation = Quaternion(0.022818306, 0.004409921, 0.0003412511, 0.99972993)
+bones/5/rotation = Quaternion(-0.003858191, 0.019258767, 0.03296645, 0.9992635)
+bones/7/rotation = Quaternion(-0.59630316, 0.4824356, -0.56143486, -0.31059533)
+bones/8/rotation = Quaternion(0.47461143, -0.036972716, 0.030876705, 0.8788763)
+bones/9/rotation = Quaternion(0.009304936, -0.11666261, -0.17234397, 0.9780598)
+bones/10/rotation = Quaternion(-0.09157762, -0.06743704, -0.13409336, 0.9844211)
+bones/11/rotation = Quaternion(0.18371344, 0.17850842, -0.19827582, 0.94608194)
+bones/12/rotation = Quaternion(0.06795943, -0.16244921, 0.18000823, 0.9677753)
+bones/15/rotation = Quaternion(0.3413512, 0.022912342, 0.001400815, 0.93965554)
+bones/16/rotation = Quaternion(0.55633074, 0.026888678, -0.034124974, 0.8298244)
+bones/19/rotation = Quaternion(0.44107556, 0.04032168, -0.016343463, 0.8964149)
+bones/20/rotation = Quaternion(0.59833777, 0.032351807, -0.045368366, 0.7993042)
+bones/23/rotation = Quaternion(0.42949986, 0.016474131, -0.013194725, 0.90282035)
+bones/24/rotation = Quaternion(0.64529616, -0.016197383, -0.05931939, 0.7614538)
+bones/27/rotation = Quaternion(0.40120462, 0.006131313, -0.051477276, 0.9145203)
+bones/28/rotation = Quaternion(0.6875229, -0.04184612, -0.083498485, 0.7201315)
+bones/31/rotation = Quaternion(0.6246296, 0.45852908, -0.5082663, 0.37583804)
+bones/32/rotation = Quaternion(0.4253146, 0.015566642, 0.045251664, 0.90377957)
+bones/33/rotation = Quaternion(0.04999864, 0.1395195, 0.39144054, 0.9081899)
+bones/34/rotation = Quaternion(-0.007815259, 0.12029863, -0.011473679, 0.9926407)
+bones/35/rotation = Quaternion(0.30419782, -0.12558755, 0.1574555, 0.9310743)
+bones/36/rotation = Quaternion(-0.023435557, 0.0006474391, -0.06363602, 0.9976978)
+bones/39/rotation = Quaternion(0.28515354, 0.008894689, 0.05543466, 0.9568361)
+bones/40/rotation = Quaternion(0.5107173, -0.010534964, 0.04000963, 0.8587526)
+bones/43/rotation = Quaternion(0.44146696, -0.025576899, 0.07529898, 0.8937466)
+bones/44/rotation = Quaternion(0.6437506, -0.0049187504, 0.06499037, 0.7624548)
+bones/47/rotation = Quaternion(0.46354806, -0.08437242, 0.018750183, 0.8818463)
+bones/48/rotation = Quaternion(0.6675749, 0.005298393, 0.04650217, 0.7430702)
+bones/51/rotation = Quaternion(0.5333313, -0.12406689, 0.008143455, 0.8367192)
+bones/52/rotation = Quaternion(0.6160058, 0.025170056, 0.049207583, 0.78580016)
+bones/55/rotation = Quaternion(-0.053253196, 0.2485909, 0.9666128, 0.032037217)
+bones/56/rotation = Quaternion(-0.3058477, 0.040045224, -0.011011566, 0.9511742)
+bones/57/rotation = Quaternion(0.51026094, -0.027079253, -0.04547821, 0.85838944)
+bones/58/rotation = Quaternion(0.41083056, 0.02110252, -0.008453712, 0.91142833)
+bones/60/rotation = Quaternion(0.09668405, 0.015225664, 0.99517787, -0.0064338436)
+bones/61/rotation = Quaternion(-0.15643848, 0.15242101, -0.01773513, 0.9756948)
+bones/62/rotation = Quaternion(0.55442196, 0.007739546, 0.033539757, 0.83152366)
+bones/63/rotation = Quaternion(0.38311505, -0.04673807, 0.012006884, 0.92243934)
+
+[editable path="Player"]
