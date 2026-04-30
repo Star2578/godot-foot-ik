@@ -262,7 +262,7 @@ func _process_modification():
 						hit_data_min = h
 						hit_dist = curr_dist
 
-				DebugDraw3D.draw_sphere(hit_data_min["position"], 0.01, Color.DARK_MAGENTA)
+				# DebugDraw3D.draw_sphere(hit_data_min["position"], 0.01, Color.DARK_MAGENTA)
 
 				var r_target_fallback: Vector3 = hit_data_min["position"]
 
@@ -302,7 +302,7 @@ func _process_modification():
 						hit_data_min = h
 						hit_dist = curr_dist
 
-				DebugDraw3D.draw_sphere(hit_data_min["position"], 0.01, Color.DARK_MAGENTA)
+				# DebugDraw3D.draw_sphere(hit_data_min["position"], 0.01, Color.DARK_MAGENTA)
 
 				var l_target_fallback: Vector3 = hit_data_min["position"]
 
