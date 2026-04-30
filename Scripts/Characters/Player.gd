@@ -25,11 +25,6 @@ var is_moving: bool
 func _ready():
 	Manager.player = self
 
-@onready var foot_ik_controller: FootIKController = %FootIKController
-
-func _ready():
-	Manager.player = self
-
 func _physics_process(delta):
 	move_direction = Vector3.ZERO
 	move_direction.x = Input.get_action_strength("move_right") - Input.get_action_strength("move_left")
