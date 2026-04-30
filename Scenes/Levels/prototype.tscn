@@ -6,6 +6,7 @@
 [ext_resource type="PackedScene" uid="uid://cr2ersq7g6q6f" path="res://Scenes/Characters/player.tscn" id="2_1g73n"]
 [ext_resource type="Texture2D" uid="uid://gwt4mrbmdv01" path="res://Assets/Textures/Orange.png" id="2_087ax"]
 [ext_resource type="Texture2D" uid="uid://dkpqh8de7tb3n" path="res://Assets/Textures/Green.png" id="3_qkav0"]
+[ext_resource type="PackedScene" uid="uid://dowsnf2tlbgmx" path="res://Scenes/Characters/player_simpleik.tscn" id="7_7wgvv"]
 
 [sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_6c4vd"]
 panorama = ExtResource("1_rrvcb")
@@ -71,10 +72,10 @@ directional_shadow_split_3 = 0.2
 directional_shadow_blend_splits = true
 
 [node name="Floor" type="MeshInstance3D" parent="." unique_id=1013451366]
-layers = 3
 mesh = SubResource("PlaneMesh_mmup0")
 
 [node name="StaticBody3D" type="StaticBody3D" parent="Floor" unique_id=659205982]
+collision_layer = 3
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Floor/StaticBody3D" unique_id=1492379547]
 shape = SubResource("ConcavePolygonShape3D_26ptr")
@@ -84,6 +85,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, -3)
 mesh = SubResource("BoxMesh_plpqy")
 
 [node name="StaticBody3D" type="StaticBody3D" parent="Wall" unique_id=1947956672]
+collision_layer = 3
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Wall/StaticBody3D" unique_id=1837003493]
 shape = SubResource("ConcavePolygonShape3D_v7prx")
@@ -93,6 +95,7 @@ transform = Transform3D(0.024770794, 0.0949033, 0, -0.028461674, 0.073667735, 0.
 mesh = SubResource("BoxMesh_plpqy")
 
 [node name="StaticBody3D" type="StaticBody3D" parent="Wall2" unique_id=1634259749]
+collision_layer = 3
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Wall2/StaticBody3D" unique_id=425232400]
 shape = SubResource("ConcavePolygonShape3D_v7prx")
@@ -102,6 +105,7 @@ transform = Transform3D(0.1238198, 0.47510847, -3.9029967e-08, -0.14226909, 0.36
 mesh = SubResource("BoxMesh_plpqy")
 
 [node name="StaticBody3D" type="StaticBody3D" parent="Wall3" unique_id=1915940939]
+collision_layer = 3
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Wall3/StaticBody3D" unique_id=182294134]
 shape = SubResource("ConcavePolygonShape3D_v7prx")
@@ -112,9 +116,12 @@ mesh = SubResource("PrismMesh_0l7qq")
 surface_material_override/0 = SubResource("StandardMaterial3D_pfpgv")
 
 [node name="StaticBody3D" type="StaticBody3D" parent="Slope" unique_id=878225]
+collision_layer = 3
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Slope/StaticBody3D" unique_id=180710606]
 shape = SubResource("ConcavePolygonShape3D_rit6o")
 
 [node name="Player" parent="." unique_id=1584071067 instance=ExtResource("2_1g73n")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.84937274, 0, 0)
+
+[node name="Player_SimpleIK" parent="." unique_id=38816863 instance=ExtResource("7_7wgvv")]
+visible = false

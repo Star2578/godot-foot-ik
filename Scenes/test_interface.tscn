@@ -13,10 +13,10 @@ mouse_filter = 2
 script = ExtResource("1_fg40r")
 
 [node name="Panel" type="Panel" parent="." unique_id=78628371]
-custom_minimum_size = Vector2(300, 300)
+custom_minimum_size = Vector2(300, 60)
 layout_mode = 0
-offset_right = 40.0
-offset_bottom = 40.0
+offset_right = 300.0
+offset_bottom = 60.0
 
 [node name="StatusLabel" type="RichTextLabel" parent="Panel" unique_id=408275890]
 unique_name_in_owner = true

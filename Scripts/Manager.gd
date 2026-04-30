@@ -1,13 +1,16 @@
 extends Node
 
 
-var is_baseline: bool = false
+var is_baseline: bool = true
 var is_simple: bool = false
 var is_footik: bool = false
 
 var ik_status: String = "Baseline (no IK)"
 
 var test_interface: Test_Interface
+var player: CharacterBody3D
+var player_simple: CharacterBody3D
+
 
 func _input(event):
 	if event is InputEvent:
@@ -39,8 +42,25 @@ func _process(_delta):
 		_:
 			ik_status = "Err"
 	
-	test_interface.update_status()
+	if test_interface:
+		test_interface.update_status()
 
 func toggle_ik(baseline: bool, simple: bool, footik: bool):
-	## TODO: toggle ik
-	pass
+	if simple and player_simple and player:
+		player_simple.show()
+		player_simple.l_twobone_ik.active = true
+		player_simple.r_twobone_ik.active = true
+		player.hide()
+		player.foot_ik_controller.active = false
+	elif footik:
+		player_simple.l_twobone_ik.active = false
+		player_simple.r_twobone_ik.active = false
+		player_simple.hide()
+		player.foot_ik_controller.active = true
+		player.show()
+	elif baseline:
+		player_simple.hide()
+		player_simple.l_twobone_ik.active = false
+		player_simple.r_twobone_ik.active = false
+		player.show()
+		player.foot_ik_controller.active = false
