@@ -17,15 +17,10 @@ const ANIMATION_BLEND: float = 7.0
 @onready var player_mesh: Node3D = $Mesh
 @onready var spring_arm_pivot: Node3D = $SpringArmPivot
 @onready var animator: AnimationTree = $AnimationTree
+@onready var foot_ik_controller: FootIKController = %FootIKController
 
 var is_moving: bool
 
-@onready var foot_ik_controller: FootIKController = %FootIKController
-
-func _ready():
-	Manager.player = self
-
-@onready var foot_ik_controller: FootIKController = %FootIKController
 
 func _ready():
 	Manager.player = self

@@ -6,6 +6,7 @@ class_name FootIKController
 var skeleton: Skeleton3D
 @export var animation: AnimationPlayer
 @export var player: CharacterBody3D
+@export var benchmark_mode: bool = false
 
 @export_group("Raycasts")
 ## Raycast starting from the right heel to detect floor height.
@@ -185,24 +186,29 @@ func _world_axes(skel_xform: Transform3D) -> Dictionary:
 func _process_modification():
 	if Engine.is_editor_hint():
 		return
-	if not skeleton:
+	if not skeleton or not player:
 		return
 	
-	# print("[FROM _process_modification]:",(skeleton.global_transform * skeleton.get_bone_global_pose(idx_l_foot)).origin.y)
-	var just_stopped = _was_moving and not player.is_moving
-	_was_moving = player.is_moving
-
-	if not player.is_moving:
-		rest_timer += get_process_delta_time()
-	else:
+	# === BENCHMARK COMPATIBILITY ===
+	var is_moving = player.is_moving or player.velocity.length() > 0.05
+	
+	if benchmark_mode:
+		# In benchmark we want fresh targets every frame, no resting/freeze
 		rest_timer = 0.0
-
+	else:
+		var just_stopped = _was_moving and not is_moving
+		_was_moving = is_moving
+		
+		if not is_moving:
+			rest_timer += get_process_delta_time()
+		else:
+			rest_timer = 0.0
 	
 	var hip_l_feet_distance := ((skeleton.global_transform * skeleton.get_bone_global_pose(idx_hips)).origin.y) - ((skeleton.global_transform * skeleton.get_bone_global_pose(idx_l_foot)).origin.y)
 	var hip_r_feet_distance := ((skeleton.global_transform * skeleton.get_bone_global_pose(idx_hips)).origin.y) - ((skeleton.global_transform * skeleton.get_bone_global_pose(idx_r_foot)).origin.y)
 	
-	if hip_l_feet_distance < 0.9:
-		print("LIFTED")
+	# if hip_l_feet_distance < 0.9:
+	# 	print("LIFTED")
 	# self.influence = smoothstep(min_y, max_y, current_foot_y)
 	# # print(current_l_foot_y, ":", current_r_foot_y)
 	# var t = clamp(inverse_lerp(min_y, max_y, min(current_l_foot_y, current_r_foot_y)), 0.0, 1.0)
@@ -226,7 +232,7 @@ func _process_modification():
 								idx_r_foot, skel_xform, char_fwd)
 	var l_target = _foot_target(left_heel_ray, left_toe_ray,
 								idx_l_foot, skel_xform, char_fwd)
-	if rest_timer > rest_duration:
+	if not benchmark_mode and rest_timer > rest_duration:
 		l_target = last_l_target
 		r_target = last_r_target
 		# return

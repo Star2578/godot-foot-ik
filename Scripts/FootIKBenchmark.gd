@@ -71,7 +71,6 @@ func _activate_phase(p: Phase):
 		Phase.SIMPLE:
 			print("→ Phase 2: SIMPLE IK")
 			Manager.toggle_ik(false, true, false)
-			# Enable benchmark mode on simple player
 			if character_body_simple.has_method("set_benchmark_mode"):
 				character_body_simple.set_benchmark_mode(true)
 			var skel = character_body_simple.find_child("Skeleton3D", true, false) as Skeleton3D
@@ -80,10 +79,15 @@ func _activate_phase(p: Phase):
 		Phase.FOOTIK:
 			print("→ Phase 3: FOOT IK CONTROLLER")
 			Manager.toggle_ik(false, false, true)
+			# Disable resting logic during benchmark
+			if character_body.foot_ik_controller:
+				character_body.foot_ik_controller.benchmark_mode = true
 			_attach_skeleton(character_body.foot_ik_controller.skeleton)
 
 		Phase.DONE:
-			# Disable benchmark mode
+			# Restore normal behavior
+			if character_body.foot_ik_controller:
+				character_body.foot_ik_controller.benchmark_mode = false
 			if character_body_simple.has_method("set_benchmark_mode"):
 				character_body_simple.set_benchmark_mode(false)
 			_stop_all()
