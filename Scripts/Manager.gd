@@ -31,7 +31,10 @@ func _input(event):
 			toggle_ik(is_baseline, is_simple, is_footik)
 
 func _process(_delta):
+	if test_interface:
+		test_interface.update_status()
 
+func toggle_ik(baseline: bool, simple: bool, footik: bool):
 	match true:
 		is_baseline:
 			ik_status = "Baseline (no IK)"
@@ -41,11 +44,6 @@ func _process(_delta):
 			ik_status = "FootIKModifier"
 		_:
 			ik_status = "Err"
-	
-	if test_interface:
-		test_interface.update_status()
-
-func toggle_ik(baseline: bool, simple: bool, footik: bool):
 	if simple and player_simple and player:
 		player_simple.show()
 		player_simple.l_twobone_ik.active = true
