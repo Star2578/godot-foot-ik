@@ -97,6 +97,7 @@ var prev_pos: Vector3
 var frozen_poses: Dictionary = {}
 var last_l_target: Transform3D
 var last_r_target: Transform3D
+var was_on_floor = true
 
 func _ready():
 	skeleton = get_skeleton()
@@ -192,7 +193,7 @@ func _process_modification():
 	var just_stopped = _was_moving and not player.is_moving
 	_was_moving = player.is_moving
 
-	if not player.is_moving:
+	if not player.is_moving or not player.is_on_floor():
 		rest_timer += get_process_delta_time()
 	else:
 		rest_timer = 0.0
@@ -201,12 +202,12 @@ func _process_modification():
 	var hip_l_feet_distance := ((skeleton.global_transform * skeleton.get_bone_global_pose(idx_hips)).origin.y) - ((skeleton.global_transform * skeleton.get_bone_global_pose(idx_l_foot)).origin.y)
 	var hip_r_feet_distance := ((skeleton.global_transform * skeleton.get_bone_global_pose(idx_hips)).origin.y) - ((skeleton.global_transform * skeleton.get_bone_global_pose(idx_r_foot)).origin.y)
 	
-	if hip_l_feet_distance < 0.9:
-		print("LIFTED")
-	# self.influence = smoothstep(min_y, max_y, current_foot_y)
+	# self.influence = smoothstep(0.9, 0.5, hip_l_feet_distance)
 	# # print(current_l_foot_y, ":", current_r_foot_y)
-	# var t = clamp(inverse_lerp(min_y, max_y, min(current_l_foot_y, current_r_foot_y)), 0.0, 1.0)
-	# self.influence = t * t * t * (t * (t * 6.0 - 15.0) + 10.0) # SmootherStep
+	var t = clamp(inverse_lerp(0.6, 0.88, max(hip_l_feet_distance,hip_r_feet_distance)), 0.0, 1.0)
+
+	self.influence = t * t * t * (t * (t * 6.0 - 15.0) + 10.0) # SmootherStep
+	# print(hip_l_feet_distance)
 
 	var skel_xform := skeleton.global_transform
 	var axes := _world_axes(skel_xform)
@@ -226,15 +227,18 @@ func _process_modification():
 								idx_r_foot, skel_xform, char_fwd)
 	var l_target = _foot_target(left_heel_ray, left_toe_ray,
 								idx_l_foot, skel_xform, char_fwd)
-	if rest_timer > rest_duration:
+	if rest_timer > rest_duration and was_on_floor:
 		l_target = last_l_target
 		r_target = last_r_target
 		# return
 	# DebugDraw3D.draw_gizmo(skeleton.global_transform * skeleton.get_bone_rest(idx_l_foot))
 
+	if not player.is_on_floor():
+		was_on_floor = false
+		return
 	_apply_hip_drop(r_target, l_target, skel_xform)
 	
-	if r_target != null and hip_r_feet_distance > 0.8:
+	if r_target != null and hip_r_feet_distance > 0.88:
 		last_r_target = r_target
 		_solve_leg(idx_r_thigh, idx_r_knee, idx_r_foot,
 				   r_target, true, skel_xform, char_fwd, char_right)
@@ -274,7 +278,7 @@ func _process_modification():
 				_solve_leg(idx_r_thigh, idx_r_knee, idx_r_foot,
 					   r_target_transform, false, skel_xform, char_fwd, char_right)
 
-	if l_target != null and hip_l_feet_distance > 0.8:
+	if l_target != null and hip_l_feet_distance > 0.88:
 		last_l_target = l_target
 		_solve_leg(idx_l_thigh, idx_l_knee, idx_l_foot,
 				   l_target, false, skel_xform, char_fwd, char_right)
