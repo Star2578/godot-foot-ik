@@ -21,6 +21,8 @@ const ANIMATION_BLEND : float = 7.0
 @onready var spring_arm_pivot : Node3D = $SpringArmPivot
 @onready var animator : AnimationTree = $AnimationTree
 
+var benchmark_mode : bool = false
+
 func _ready():
 	Manager.player_simple = self
 
@@ -56,6 +58,10 @@ func _physics_process(delta):
 	animate(delta)
 
 func animate(delta):
+	if benchmark_mode:
+		return  # Let benchmark fully control animation and IK
+	
+	# Original code remains for normal gameplay
 	if is_on_floor():
 		animator.set("parameters/ground_air_transition/transition_request", "grounded")
 		
@@ -71,7 +77,6 @@ func animate(delta):
 	else:
 		toggle_ik(false)
 		animator.set("parameters/ground_air_transition/transition_request", "air")
-
 func toggle_ik(active: bool):
 	l_twobone_ik.active = active
 	r_twobone_ik.active = active
