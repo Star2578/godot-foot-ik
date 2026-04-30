@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://dbfbwpvx4kmh8"
-path="res://.godot/imported/Object_Character.glb-59e8217d7c7b2721070b62216df94604.scn"
+uid="uid://c864au8vusp28"
+path="res://.godot/imported/character_model.glb-07a1c0e6131b1baf11d9ec24fa1e22f9.scn"
 
 [deps]
 
-source_file="res://Assets/Models/Characters/Object_Character.glb"
-dest_files=["res://.godot/imported/Object_Character.glb-59e8217d7c7b2721070b62216df94604.scn"]
+source_file="res://Assets/Models/Characters/character_model.glb"
+dest_files=["res://.godot/imported/character_model.glb-07a1c0e6131b1baf11d9ec24fa1e22f9.scn"]
 
 [params]
 
@@ -17,7 +17,7 @@ nodes/root_type=""
 nodes/root_name=""
 nodes/root_script=null
 nodes/apply_root_scale=true
-nodes/root_scale=0.00999999999999999
+nodes/root_scale=1.0
 nodes/import_as_skeleton_bones=false
 nodes/use_name_suffixes=true
 nodes/use_node_type_suffixes=true
@@ -38,5 +38,5 @@ materials/extract=0
 materials/extract_format=0
 materials/extract_path=""
 _subresources={}
-gltf/naming_version=1
-gltf/embedded_image_handling=0
+gltf/naming_version=2
+gltf/embedded_image_handling=1
