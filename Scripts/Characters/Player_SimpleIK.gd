@@ -21,7 +21,7 @@ const ANIMATION_BLEND : float = 7.0
 @onready var spring_arm_pivot : Node3D = $SpringArmPivot
 @onready var animator : AnimationTree = $AnimationTree
 
-var benchmark_mode : bool = false
+@export var benchmark_mode : bool = false
 
 func _ready():
 	Manager.player_simple = self
