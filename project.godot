@@ -13,7 +13,10 @@ config_version=5
 config/name="feet"
 run/main_scene="uid://coue2qehpn4fr"
 config/features=PackedStringArray("4.6", "GL Compatibility")
-run/max_fps=60
+
+[audio]
+
+buses/default_bus_layout=""
 
 [autoload]
 
@@ -26,6 +29,7 @@ settings/addon_root_folder="res://addons/debug_draw_3d"
 [display]
 
 window/stretch/mode="canvas_items"
+window/vsync/vsync_mode=0
 
 [editor_plugins]
 

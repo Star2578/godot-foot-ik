@@ -1,5 +1,6 @@
 @tool
 extends SkeletonModifier3D
+class_name FootIKController
 
 ## The skeleton that this IK modifier will manipulate.
 var skeleton: Skeleton3D

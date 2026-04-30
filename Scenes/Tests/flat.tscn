@@ -1,0 +1,147 @@
+[gd_scene format=3 uid="uid://bd21ay2ls2a3l"]
+
+[ext_resource type="PackedScene" uid="uid://cmfhcgg1b32b5" path="res://Scenes/test_interface.tscn" id="2_08t82"]
+[ext_resource type="Texture2D" uid="uid://doyodkg1ds7td" path="res://Assets/Textures/Sky.png" id="3_bjv34"]
+[ext_resource type="Texture2D" uid="uid://b8q44ipg8a3cq" path="res://Assets/Textures/Black.png" id="4_2kv0m"]
+[ext_resource type="PackedScene" uid="uid://cr2ersq7g6q6f" path="res://Scenes/Characters/player.tscn" id="7_6x05e"]
+
+[sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_6c4vd"]
+panorama = ExtResource("3_bjv34")
+
+[sub_resource type="Sky" id="Sky_5ngqa"]
+sky_material = SubResource("PanoramaSkyMaterial_6c4vd")
+
+[sub_resource type="Environment" id="Environment_ctwiv"]
+background_mode = 2
+sky = SubResource("Sky_5ngqa")
+tonemap_mode = 3
+glow_enabled = true
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ajchh"]
+albedo_texture = ExtResource("4_2kv0m")
+uv1_triplanar = true
+texture_filter = 5
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_mmup0"]
+material = SubResource("StandardMaterial3D_ajchh")
+size = Vector2(50, 50)
+
+[sub_resource type="ConcavePolygonShape3D" id="ConcavePolygonShape3D_26ptr"]
+data = PackedVector3Array(25, 0, 25, -25, 0, 25, 25, 0, -25, -25, 0, 25, -25, 0, -25, 25, 0, -25)
+
+[node name="Prototype" type="Node3D" unique_id=376393720]
+
+[node name="Test_Interface" parent="." unique_id=1256170037 instance=ExtResource("2_08t82")]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1722610124]
+environment = SubResource("Environment_ctwiv")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=996413636]
+transform = Transform3D(-0.866026, -0.433013, 0.249999, 0.5, -0.75, 0.433012, -1.3411e-07, 0.499999, 0.866026, 0, 0, 0)
+shadow_enabled = true
+directional_shadow_split_1 = 0.07
+directional_shadow_split_2 = 0.12
+directional_shadow_split_3 = 0.2
+directional_shadow_blend_splits = true
+
+[node name="Floor" type="MeshInstance3D" parent="." unique_id=1013451366]
+layers = 3
+mesh = SubResource("PlaneMesh_mmup0")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="Floor" unique_id=659205982]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Floor/StaticBody3D" unique_id=1492379547]
+shape = SubResource("ConcavePolygonShape3D_26ptr")
+
+[node name="Player" parent="." unique_id=1584071067 instance=ExtResource("7_6x05e")]
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 0.0986166, 0.11043835, 3.8354135)
+
+[node name="Skeleton3D" parent="Player/Mesh/Armature" parent_id_path=PackedInt32Array(1584071067, 1867960763) index="0" unique_id=1940579]
+bones/0/position = Vector3(-0.0074143372, 1.5578932, -104.203)
+bones/0/rotation = Quaternion(-0.6801926, -0.2685652, 0.24978423, 0.63468003)
+bones/1/rotation = Quaternion(-0.03141457, 0.040848818, -0.003894097, 0.99866384)
+bones/2/rotation = Quaternion(0.097529374, 0.08188841, -0.005580722, 0.9918424)
+bones/3/rotation = Quaternion(0.11019316, 0.082050584, -0.0066964994, 0.9904951)
+bones/4/rotation = Quaternion(-0.023158029, -0.011033395, 0.00038692608, 0.99967086)
+bones/5/rotation = Quaternion(-0.038063496, 0.17539203, 0.015816336, 0.9836355)
+bones/7/rotation = Quaternion(-0.5677924, 0.5146184, -0.5139039, -0.38559368)
+bones/8/position = Vector3(1.96774e-07, 10.8382, -3.20984e-07)
+bones/8/rotation = Quaternion(0.4878726, 0.041373093, 0.095173314, 0.86672413)
+bones/9/rotation = Quaternion(0.055050477, 0.013740363, -0.3628988, 0.9300995)
+bones/10/position = Vector3(1.5054e-05, 28.3288, 8.42971e-07)
+bones/10/rotation = Quaternion(0.09828536, -0.055288415, -0.09465966, 0.989102)
+bones/11/rotation = Quaternion(0.23220599, 0.143906, -0.19935912, 0.94107777)
+bones/12/position = Vector3(-4.17233e-06, 4.18898, -1.18934e-05)
+bones/12/rotation = Quaternion(-0.044660274, 0.00069450843, 0.19670878, 0.97944415)
+bones/13/position = Vector3(1.00732e-05, 3.41626, -1.14105205e-07)
+bones/13/rotation = Quaternion(-0.0016643207, -0.00080749637, 0.0069199125, 0.99997437)
+bones/15/rotation = Quaternion(0.03695919, 0.00957161, 0.010112814, 0.9992198)
+bones/16/rotation = Quaternion(0.14695467, 0.0002585011, 0.010190862, 0.9890908)
+bones/17/position = Vector3(-2.01722e-07, 2.85001, 9.19147e-07)
+bones/19/rotation = Quaternion(0.11145049, 0.008553939, 0.023974275, 0.993444)
+bones/20/rotation = Quaternion(0.26089397, 0.0016148504, -0.015719702, 0.96523815)
+bones/21/position = Vector3(-4.1659797e-07, 2.95, -4.2249194e-06)
+bones/23/rotation = Quaternion(0.18615958, -0.008613174, 0.06773627, 0.98014396)
+bones/24/rotation = Quaternion(0.32018822, -0.0024343752, -0.03400298, 0.9467404)
+bones/25/position = Vector3(7.95918e-07, 2.88969, -1.6640297e-07)
+bones/27/rotation = Quaternion(0.20717795, -0.011032199, 0.09258618, 0.9738498)
+bones/28/position = Vector3(1.0250101e-06, 3.6, -1.0771498e-07)
+bones/28/rotation = Quaternion(0.34893408, -0.011902647, -0.067908324, 0.9346079)
+bones/29/position = Vector3(-2.89617e-06, 2.09998, 6.26796e-06)
+bones/31/rotation = Quaternion(0.5147043, 0.55489194, -0.54414284, 0.362054)
+bones/32/position = Vector3(1.19209005e-07, 10.8377, -7.69096e-07)
+bones/32/rotation = Quaternion(0.51692873, -0.057890784, 0.13823697, 0.84280723)
+bones/33/rotation = Quaternion(-0.009925579, 0.060362887, 0.41032282, 0.90988624)
+bones/34/rotation = Quaternion(-0.14089213, 0.13818906, 0.01359677, 0.9802389)
+bones/35/rotation = Quaternion(0.30740196, -0.0070464252, 0.15465534, 0.9389016)
+bones/36/position = Vector3(2.98023e-07, 4.18709, 1.43951e-05)
+bones/36/rotation = Quaternion(-0.009037688, 0.0017586339, -0.0074745105, 0.9999297)
+bones/37/position = Vector3(1.84774e-06, 3.41839, -4.4137414e-07)
+bones/37/rotation = Quaternion(-0.0015308001, 0.00074503914, -0.006073461, 0.99998015)
+bones/39/rotation = Quaternion(0.03721662, -0.005727963, 0.06130087, 0.9974088)
+bones/40/rotation = Quaternion(0.15097028, -0.00090103963, -0.0058865626, 0.98852044)
+bones/41/position = Vector3(-1.18063e-07, 2.85002, -7.2845205e-06)
+bones/43/rotation = Quaternion(0.13011041, 0.0047984333, -0.07921923, 0.9883181)
+bones/44/position = Vector3(7.8513e-07, 3.70001, 5.89059e-07)
+bones/44/rotation = Quaternion(0.19522728, -0.001274711, 0.014797225, 0.98064566)
+bones/45/position = Vector3(1.98097e-06, 2.94999, -3.74432e-06)
+bones/47/rotation = Quaternion(0.27029476, -0.015706368, -0.12428524, 0.95459276)
+bones/48/rotation = Quaternion(0.28092688, 0.0017594259, 0.024454497, 0.95941603)
+bones/51/rotation = Quaternion(0.2962967, -0.01627617, -0.15579861, 0.9421625)
+bones/52/position = Vector3(-9.29924e-07, 3.59999, -1.33763e-05)
+bones/52/rotation = Quaternion(0.34145495, 0.011373795, 0.04946812, 0.93852663)
+bones/53/position = Vector3(4.83308e-06, 2.10001, 3.18113e-06)
+bones/55/rotation = Quaternion(-0.12548749, 0.033543125, 0.9838637, 0.12304496)
+bones/56/rotation = Quaternion(-0.31257457, 0.07736767, -0.023270952, 0.9464512)
+bones/57/rotation = Quaternion(0.6023133, 0.06456974, 0.1301195, 0.784932)
+bones/58/rotation = Quaternion(0.34990692, 0.0038085089, -0.0019664897, 0.93677473)
+bones/60/rotation = Quaternion(0.0791171, 0.21983375, 0.9671123, -0.10053612)
+bones/61/rotation = Quaternion(-0.32126513, 0.11897907, -0.033442467, 0.9388899)
+bones/62/rotation = Quaternion(0.5004931, -0.02764167, -0.055933848, 0.8634895)
+bones/63/rotation = Quaternion(0.3538838, 0.017343367, -0.023602493, 0.9348307)
+
+[node name="FootIKModifier" parent="Player/Mesh/Armature/Skeleton3D" index="3" unique_id=1137011767]
+process_mode = 0
+active = true
+hip_max_drop = 0.55
+
+[node name="AnimationTree" parent="Player" index="4" unique_id=1358118725]
+parameters/iwr_blend/blend_amount = -1.0
+
+[node name="R_Heel_RayCast3D" parent="Player/Node3D" parent_id_path=PackedInt32Array(1584071067, 1883513961) index="0" unique_id=76400933]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+target_position = Vector3(0, -1, 0)
+
+[node name="R_Toe_RayCast3D" parent="Player/Node3D" parent_id_path=PackedInt32Array(1584071067, 1883513961) index="1" unique_id=791100057]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+target_position = Vector3(0, -1, 0)
+
+[node name="L_Heel_RayCast3D" parent="Player/Node3D" parent_id_path=PackedInt32Array(1584071067, 1883513961) index="2" unique_id=1339688992]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+target_position = Vector3(0, -1, 0)
+
+[node name="L_Toe_RayCast3D" parent="Player/Node3D" parent_id_path=PackedInt32Array(1584071067, 1883513961) index="3" unique_id=1888974930]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+target_position = Vector3(0, -1, 0)
+
+[editable path="Player"]
