@@ -147,17 +147,16 @@ func _tick_test_sequence(delta: float):
 	character_body_simple.velocity = vel
 	character_body_simple.move_and_slide()
 
-	# === SIMPLE IK SPECIFIC CONTROL ===
+	# Simple IK control
 	if _phase == Phase.SIMPLE:
-		# Force correct IK state: OFF when walking, ON when standing
 		if character_body_simple.has_method("toggle_ik"):
 			character_body_simple.toggle_ik(not is_walking)
 
-	# Drive animation blend (this is safe for all)
+	# Drive animations
 	_drive_animator(animator_main,   vel, character_body.is_on_floor(), delta)
 	_drive_animator(animator_simple, vel, character_body_simple.is_on_floor(), delta)
 
-	# Warmup
+	# Warmup phase - only count, don't record or progress state
 	if _is_warmup:
 		_warmup_counter += 1
 		if _warmup_counter >= warmup_frames:
@@ -165,9 +164,10 @@ func _tick_test_sequence(delta: float):
 			print("  [%s] Warmup finished → Starting measurement" % Phase.keys()[_phase])
 		return
 
+	# Normal operation - progress the test
 	_sub_step += 1
 
-	# State machine
+	# State transitions
 	match _test_state:
 		TestState.STAND1:
 			if _sub_step >= stand_frames:
@@ -179,7 +179,7 @@ func _tick_test_sequence(delta: float):
 			if _sub_step >= walk_frames:
 				_test_state = TestState.STAND2
 				_sub_step = 0
-				print("  [%s] → Standing (after forward)" % Phase.keys()[_phase])
+				print("  [%s] → Standing after forward walk" % Phase.keys()[_phase])
 
 		TestState.STAND2:
 			if _sub_step >= stand_frames:
@@ -201,9 +201,9 @@ func _tick_test_sequence(delta: float):
 					_activate_phase(Phase.values()[_phase + 1])
 				return
 
-	# Record data during walking + final stand
-	if _test_state in [TestState.WALK_FORWARD, TestState.WALK_BACK, TestState.STAND3]:
-		_record(_phase)
+	# ==================== RECORDING ====================
+	# Record EVERY frame after warmup - this captures floating during walk AND stand
+	_record(_phase)
 
 
 func _drive_animator(anim: AnimationTree, vel: Vector3, on_floor: bool, delta: float):
@@ -292,10 +292,11 @@ func _print_report():
 	print("╠════════════════════════════════════════════════════════════════════════╣")
 	print("║  Terrain    : %-56s║" % terrain_label)
 	print("║  Walk speed : %-56s║" % ("%.1f m/s" % walk_speed))
-	print("║  NOTE: Simple IK measured while STANDING. Others measured WALKING.    ║")
+	print("║  NOTE: All methods tested with identical Stand→Walk→Stand→Walk→Stand pattern.    ║")
+	print("║        Foot floating/sinking measured during BOTH walking and standing.         ║")
 	print("╠══════════════════╦════════════════╦════════════════╦══════════════════╣")
 	print("║  FOOT Y ERROR    ║  Baseline      ║  Simple IK     ║  FootIKController║")
-	print("║                  ║  (walking)     ║  (standing)    ║  (walking)       ║")
+	print("║                  ║  (walk+stand)  ║  (walk+stand)  ║  (walk+stand)    ║")
 	print("╠══════════════════╬════════════════╬════════════════╬══════════════════╣")
 	print("║  Avg both feet   ║   %7.2f cm   ║   %7.2f cm   ║   %7.2f cm     ║" % [avg_bl, avg_sm, avg_fk])
 	print("║  Max error       ║   %7.2f cm   ║   %7.2f cm   ║   %7.2f cm     ║" % [max_bl, max_sm, max_fk])
