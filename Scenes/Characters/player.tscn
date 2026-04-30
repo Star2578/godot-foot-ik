@@ -3742,6 +3742,8 @@ bones/64/scale = Vector3(1, 1, 1)
 
 [node name="FootIKController" type="SkeletonModifier3D" parent="Mesh/Armature/Skeleton3D" unique_id=1650719568 node_paths=PackedStringArray("animation", "right_heel_ray", "right_toe_ray", "left_heel_ray", "left_toe_ray")]
 unique_name_in_owner = true
+[node name="FootIKController" type="SkeletonModifier3D" parent="Mesh/Armature/Skeleton3D" unique_id=1650719568 node_paths=PackedStringArray("animation", "right_heel_ray", "right_toe_ray", "left_heel_ray", "left_toe_ray")]
+unique_name_in_owner = true
 process_mode = 0
 process_priority = 0
 process_physics_priority = 0
@@ -3756,15 +3758,17 @@ top_level = false
 visible = true
 visibility_parent = NodePath("")
 active = false
+active = false
 influence = 1.0
 script = ExtResource("2_gy20a")
+animation = NodePath("../../../../AnimationPlayer")
 animation = NodePath("../../../../AnimationPlayer")
 right_heel_ray = NodePath("../../../../Node3D/R_Heel_RayCast3D")
 right_toe_ray = NodePath("../../../../Node3D/R_Toe_RayCast3D")
 left_heel_ray = NodePath("../../../../Node3D/L_Heel_RayCast3D")
 left_toe_ray = NodePath("../../../../Node3D/L_Toe_RayCast3D")
 ground_snap = 0.085
-hip_max_drop = 0.2
+hip_max_drop = 0.1
 knee_outward_bias = 0.0
 ray_start_offset = 1.0
 metadata/_custom_type_script = "uid://df1m7tq0c012v"
@@ -3805,6 +3809,7 @@ right_toe_ray = NodePath("../../../../Node3D/R_Toe_RayCast3D")
 left_heel_ray = NodePath("../../../../Node3D/L_Heel_RayCast3D")
 left_toe_ray = NodePath("../../../../Node3D/L_Toe_RayCast3D")
 hip_max_drop = 1.0
+ray_start_offset = 1.0
 ray_start_offset = 1.0
 metadata/_custom_type_script = "uid://cpwgyusqc0215"
 
