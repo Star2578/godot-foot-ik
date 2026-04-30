@@ -4,6 +4,7 @@ extends SkeletonModifier3D
 ## The skeleton that this IK modifier will manipulate.
 var skeleton: Skeleton3D
 @export var animation: AnimationPlayer
+@export var player: CharacterBody3D
 
 @export_group("Raycasts")
 ## Raycast starting from the right heel to detect floor height.
@@ -46,6 +47,7 @@ enum Axis {X_POS, Y_POS, Z_POS, X_NEG, Y_NEG, Z_NEG}
 @export var right_axis: Axis = Axis.X_POS
 
 @export_group("IK Settings")
+@export var foot_lifting_threshold: float = 0.75 # how high feet is off the ground to disable IK.
 ## Small offset to keep the foot slightly above the collision point to prevent clipping.
 @export var ground_snap: float = 0.015
 ## The maximum distance the hips are allowed to drop when crouching on uneven terrain.
@@ -82,6 +84,18 @@ var _debug_printed := false
 var min_y: float = INF
 var max_y: float = - INF
 
+var hip_to_l_foot_rest_distance
+var hip_to_r_foot_rest_distance
+var l_ankle_correction: Quaternion
+var r_ankle_correction: Quaternion
+
+var rest_timer = 0
+var _was_moving: bool = false
+var rest_duration = 0.5
+var prev_pos: Vector3
+var frozen_poses: Dictionary = {}
+var last_l_target: Transform3D
+var last_r_target: Transform3D
 
 func _ready():
 	skeleton = get_skeleton()
@@ -101,6 +115,18 @@ func _ready():
 	r_lower_len = _rest_len(idx_r_knee, idx_r_foot)
 	l_upper_len = _rest_len(idx_l_thigh, idx_l_knee)
 	l_lower_len = _rest_len(idx_l_knee, idx_l_foot)
+
+
+	var bone_up_axis := Vector3.UP # Change to Vector3.DOWN if your rig is inverted
+	l_ankle_correction = Quaternion(skeleton.get_bone_rest(idx_l_foot).basis * bone_up_axis, Vector3.UP)
+	r_ankle_correction = Quaternion(skeleton.get_bone_rest(idx_r_foot).basis * bone_up_axis, Vector3.UP)
+	hip_to_l_foot_rest_distance = ((skeleton.global_transform * skeleton.get_bone_global_pose(idx_hips)).origin.y) - ((skeleton.global_transform * skeleton.get_bone_global_pose(idx_l_foot)).origin.y)
+	hip_to_r_foot_rest_distance = ((skeleton.global_transform * skeleton.get_bone_global_pose(idx_hips)).origin.y) - ((skeleton.global_transform * skeleton.get_bone_global_pose(idx_r_foot)).origin.y)
+	
+	prev_pos = transform.origin
+	for idx in range(skeleton.get_bone_count()):
+		frozen_poses[idx] = skeleton.get_bone_pose(idx)
+
 	print("=== FootIK segment lengths ===")
 	print("  R upper: ", r_upper_len, "  lower: ", r_lower_len)
 	print("  L upper: ", l_upper_len, "  lower: ", l_lower_len)
@@ -118,15 +144,7 @@ func _rest_len(a: int, b: int) -> float:
 
 
 func _global_pose(bone_idx: int) -> Transform3D:
-	var chain: Array[int] = []
-	var idx := bone_idx
-	while idx >= 0:
-		chain.push_front(idx)
-		idx = skeleton.get_bone_parent(idx)
-	var xform := Transform3D.IDENTITY
-	for i in chain:
-		xform = xform * skeleton.get_bone_pose(i)
-	return xform
+	return skeleton.get_bone_global_pose(bone_idx)
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -144,7 +162,7 @@ static func _axis_vec(a: Axis) -> Vector3:
 
 
 func _world_axes(skel_xform: Transform3D) -> Dictionary:
-	var hip_basis := (skel_xform * _global_pose(idx_hips)).basis
+	var hip_basis := (skel_xform * skeleton.get_bone_global_pose(idx_hips)).basis
 	var fwd := (hip_basis * _axis_vec(forward_axis)).normalized()
 	var rgt := (hip_basis * _axis_vec(right_axis)).normalized()
 	# Strip vertical component from forward so knees don't tilt
@@ -162,17 +180,32 @@ func _world_axes(skel_xform: Transform3D) -> Dictionary:
 # ═══════════════════════════════════════════════════════════════
 # MAIN
 # ═══════════════════════════════════════════════════════════════
+
 func _process_modification():
 	if Engine.is_editor_hint():
 		return
 	if not skeleton:
 		return
-	var current_foot_y := (skeleton.get_bone_global_pose(idx_l_foot)).origin.y
-	min_y = min(current_foot_y, min_y)
-	max_y = max(current_foot_y, max_y)
+	
+	# print("[FROM _process_modification]:",(skeleton.global_transform * skeleton.get_bone_global_pose(idx_l_foot)).origin.y)
+	var just_stopped = _was_moving and not player.is_moving
+	_was_moving = player.is_moving
 
-	self.influence = smoothstep(min_y, max_y, current_foot_y)
-	# self.influence = (current_foot_y - min_y) / (max_y - min_y)
+	if not player.is_moving:
+		rest_timer += get_process_delta_time()
+	else:
+		rest_timer = 0.0
+
+	
+	var hip_l_feet_distance := ((skeleton.global_transform * skeleton.get_bone_global_pose(idx_hips)).origin.y) - ((skeleton.global_transform * skeleton.get_bone_global_pose(idx_l_foot)).origin.y)
+	var hip_r_feet_distance := ((skeleton.global_transform * skeleton.get_bone_global_pose(idx_hips)).origin.y) - ((skeleton.global_transform * skeleton.get_bone_global_pose(idx_r_foot)).origin.y)
+	
+	if hip_l_feet_distance < 0.9:
+		print("LIFTED")
+	# self.influence = smoothstep(min_y, max_y, current_foot_y)
+	# # print(current_l_foot_y, ":", current_r_foot_y)
+	# var t = clamp(inverse_lerp(min_y, max_y, min(current_l_foot_y, current_r_foot_y)), 0.0, 1.0)
+	# self.influence = t * t * t * (t * (t * 6.0 - 15.0) + 10.0) # SmootherStep
 
 	var skel_xform := skeleton.global_transform
 	var axes := _world_axes(skel_xform)
@@ -192,16 +225,22 @@ func _process_modification():
 								idx_r_foot, skel_xform, char_fwd)
 	var l_target = _foot_target(left_heel_ray, left_toe_ray,
 								idx_l_foot, skel_xform, char_fwd)
+	if rest_timer > rest_duration:
+		l_target = last_l_target
+		r_target = last_r_target
+		# return
+	# DebugDraw3D.draw_gizmo(skeleton.global_transform * skeleton.get_bone_rest(idx_l_foot))
 
 	_apply_hip_drop(r_target, l_target, skel_xform)
 	
-	if r_target != null:
+	if r_target != null and hip_r_feet_distance > 0.8:
+		last_r_target = r_target
 		_solve_leg(idx_r_thigh, idx_r_knee, idx_r_foot,
 				   r_target, true, skel_xform, char_fwd, char_right)
-		_align_toe(idx_r_toe, skel_xform)
+		# _align_toe(idx_r_toe, skel_xform)
 
 		# fallback if foot can't reach desired target
-		if not _check_if_reach(idx_r_foot, r_target):
+		if not _check_if_reach(idx_r_foot, r_target) and rest_timer > rest_duration:
 			var r_foot_pos := skeleton.to_global(skeleton.get_bone_global_pose(idx_r_foot).origin)
 			
 			var hit_data := _sweep_cast(r_foot_pos, 30, 0.4, 0.4)
@@ -234,13 +273,14 @@ func _process_modification():
 				_solve_leg(idx_r_thigh, idx_r_knee, idx_r_foot,
 					   r_target_transform, false, skel_xform, char_fwd, char_right)
 
-	if l_target != null:
+	if l_target != null and hip_l_feet_distance > 0.8:
+		last_l_target = l_target
 		_solve_leg(idx_l_thigh, idx_l_knee, idx_l_foot,
 				   l_target, false, skel_xform, char_fwd, char_right)
-		_align_toe(idx_l_toe, skel_xform)
+		# _align_toe(idx_l_toe, skel_xform)
 		
 		# fallback if foot can't reach desired target
-		if not _check_if_reach(idx_l_foot, l_target):
+		if not _check_if_reach(idx_l_foot, l_target) and rest_timer > rest_duration:
 			var l_foot_pos := skeleton.to_global(skeleton.get_bone_global_pose(idx_l_foot).origin)
 			
 			var hit_data := _sweep_cast(l_foot_pos, 30, 0.4, 0.4)
@@ -273,12 +313,13 @@ func _process_modification():
 				_solve_leg(idx_l_thigh, idx_l_knee, idx_l_foot,
 					   l_target_transform, false, skel_xform, char_fwd, char_right)
 	
+	prev_pos = transform.origin
 				
 func _print_debug(skel_xform: Transform3D, fwd: Vector3, right: Vector3):
 	print("=== FootIK one-shot debug ===")
 	print("  skeleton pos: ", skeleton.global_position,
 		  "  scale Y: ", skel_xform.basis.get_scale().y)
-	var hip_basis := (skel_xform * _global_pose(idx_hips)).basis
+	var hip_basis := (skel_xform * skeleton.get_bone_global_pose(idx_hips)).basis
 	print("  Hip local→world  X:", hip_basis.x.normalized(),
 		  "  Y:", hip_basis.y.normalized(),
 		  "  Z:", hip_basis.z.normalized())
@@ -308,7 +349,7 @@ func _print_debug(skel_xform: Transform3D, fwd: Vector3, right: Vector3):
 func _place_ray(ray: RayCast3D, bone_idx: int, skel_xform: Transform3D):
 	if not ray:
 		return
-	var bone_world := skel_xform * _global_pose(bone_idx).origin
+	var bone_world := skel_xform * skeleton.get_bone_global_pose(bone_idx).origin
 
 
 	ray.global_position = bone_world + Vector3(0.0, ray_start_offset, 0.0)
@@ -333,7 +374,7 @@ func _foot_target(heel_ray: RayCast3D, toe_ray: RayCast3D,
 	var surface_n := heel_ray.get_collision_normal()
 
 
-	var foot_world_y := (skel_xform * _global_pose(foot_idx).origin).y
+	var foot_world_y := (skel_xform * skeleton.get_bone_global_pose(foot_idx).origin).y
 
 
 	if heel_hit.y > foot_world_y + 0.1:
@@ -407,7 +448,7 @@ func _apply_hip_drop(r_target: Variant, l_target: Variant,
 
 	var parent_idx := skeleton.get_bone_parent(idx_hips)
 	if parent_idx >= 0:
-		var parent_basis := _global_pose(parent_idx).basis.orthonormalized()
+		var parent_basis := skeleton.get_bone_global_pose(parent_idx).basis.orthonormalized()
 		skel_local = parent_basis.inverse() * skel_local
 
 	var pose := skeleton.get_bone_pose(idx_hips)
@@ -419,7 +460,7 @@ func _drop_needed(target: Variant, foot_idx: int,
 				  skel_xform: Transform3D) -> float:
 	if target == null:
 		return 0.0
-	var foot_world_y := (skel_xform * _global_pose(foot_idx).origin).y
+	var foot_world_y := (skel_xform * skeleton.get_bone_global_pose(foot_idx).origin).y
 	return (target as Transform3D).origin.y - foot_world_y
 
 
@@ -435,7 +476,7 @@ func _solve_leg(thigh_idx: int, knee_idx: int, foot_idx: int,
 	var lower_len := (r_lower_len if is_right else l_lower_len) * skel_scale
 	var total_len := upper_len + lower_len
 
-	var thigh_pos := skel_xform * _global_pose(thigh_idx).origin
+	var thigh_pos := skel_xform * skeleton.get_bone_global_pose(thigh_idx).origin
 	var foot_pos := target_world.origin
 
 	var to_target := foot_pos - thigh_pos
@@ -486,19 +527,15 @@ func _solve_leg(thigh_idx: int, knee_idx: int, foot_idx: int,
 	var desired_knee_pos := thigh_pos + dir.rotated(plane_n, angle_a) * upper_len
 
 	# Apply rotations
-	var knee_cur_pos := skel_xform * _global_pose(knee_idx).origin
+	var knee_cur_pos := skel_xform * skeleton.get_bone_global_pose(knee_idx).origin
 	_rotate_bone_toward(thigh_idx, thigh_pos,
 						knee_cur_pos, desired_knee_pos, skel_xform)
 
-	var knee_new_pos := skel_xform * _global_pose(knee_idx).origin
-	var foot_cur_pos := skel_xform * _global_pose(foot_idx).origin
+	var knee_new_pos := skel_xform * skeleton.get_bone_global_pose(knee_idx).origin
+	var foot_cur_pos := skel_xform * skeleton.get_bone_global_pose(foot_idx).origin
 	_rotate_bone_toward(knee_idx, knee_new_pos,
 						foot_cur_pos, foot_pos, skel_xform)
 
-	# if foot_idx == idx_l_foot:
-		# DebugDraw3D.draw_gizmo(target_world,Color.BLACK)
-		# DebugDraw3D.draw_gizmo(skeleton.global_transform*skeleton.get_bone_global_pose(idx_l_foot))
-		# DebugDraw3D.draw_gizmo(skeleton.global_transform * skeleton.get_bone_rest(idx_l_foot))
 	_rotate_foot_to_surface(foot_idx, target_world.basis, skel_xform)
 
 
@@ -534,7 +571,7 @@ func _rotate_bone_toward(bone_idx: int,
 	var parent_idx := skeleton.get_bone_parent(bone_idx)
 	var parent_basis: Basis
 	if parent_idx >= 0:
-		parent_basis = (skel_xform * _global_pose(parent_idx)).basis.orthonormalized()
+		parent_basis = (skel_xform * skeleton.get_bone_global_pose(parent_idx)).basis.orthonormalized()
 	else:
 		parent_basis = skel_xform.basis.orthonormalized()
 
@@ -554,25 +591,21 @@ func _rotate_bone_toward(bone_idx: int,
 
 func _rotate_foot_to_surface(foot_idx: int, target_world_basis: Basis,
 							 skel_xform: Transform3D):
-	var parent_idx := skeleton.get_bone_parent(foot_idx)
+	var ankle_correction := (l_ankle_correction if foot_idx == idx_l_foot else r_ankle_correction)
+	var target_rot := target_world_basis.get_rotation_quaternion()
+	
+	if target_rot.dot(ankle_correction) < 0.0:
+		ankle_correction = - ankle_correction
 
+	var normal_rotation := (target_rot * ankle_correction).normalized()
+	var parent_global_rot := Quaternion(skeleton.get_bone_global_pose(skeleton.get_bone_parent(foot_idx)).basis)
+	
+	var skel_global_rot := skeleton.global_basis.get_rotation_quaternion()
+	var parent_world_rot := skel_global_rot * parent_global_rot
 
-	var parent_world_xform: Transform3D
-	if parent_idx >= 0:
-		parent_world_xform = skel_xform * _global_pose(parent_idx)
-	else:
-		parent_world_xform = skel_xform
+	var local_rotation := parent_world_rot.inverse() * normal_rotation
 
-
-	var local_basis := parent_world_xform.basis.inverse() \
-					   * target_world_basis.orthonormalized()
-
-	var pose := skeleton.get_bone_pose(foot_idx)
-	var original_scale := pose.basis.get_scale()
-
-
-	pose.basis = local_basis.orthonormalized().scaled(original_scale)
-	skeleton.set_bone_pose(foot_idx, pose)
+	skeleton.set_bone_pose_rotation(foot_idx, local_rotation)
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -581,8 +614,8 @@ func _rotate_foot_to_surface(foot_idx: int, target_world_basis: Basis,
 func _debug_draw(skel_xform: Transform3D, fwd: Vector3, right: Vector3):
 	for pair in [[idx_r_thigh, idx_r_knee], [idx_r_knee, idx_r_foot],
 				 [idx_l_thigh, idx_l_knee], [idx_l_knee, idx_l_foot]]:
-		var a := skel_xform * _global_pose(pair[0]).origin
-		var b := skel_xform * _global_pose(pair[1]).origin
+		var a := skel_xform * skeleton.get_bone_global_pose(pair[0]).origin
+		var b := skel_xform * skeleton.get_bone_global_pose(pair[1]).origin
 		# DebugDraw3D.draw_line(a, b, Color.YELLOW)
 
 
@@ -590,14 +623,14 @@ func _debug_draw(skel_xform: Transform3D, fwd: Vector3, right: Vector3):
 		if not ray:
 			continue
 		var world_end = ray.global_position + ray.global_basis * ray.target_position
-		DebugDraw3D.draw_line(ray.global_position, world_end, Color.GREEN)
+		# DebugDraw3D.draw_line(ray.global_position, world_end, Color.GREEN)
 
-		DebugDraw3D.draw_sphere(ray.global_position, 0.02, Color.CYAN)
-		if ray.is_colliding():
-			DebugDraw3D.draw_sphere(ray.get_collision_point(), 0.03, Color.RED)
+		# DebugDraw3D.draw_sphere(ray.global_position, 0.02, Color.CYAN)
+		# if ray.is_colliding():
+			# DebugDraw3D.draw_sphere(ray.get_collision_point(), 0.03, Color.RED)
 
 	# Forward = green, Right = red, Up = blue
-	# var hp := (skel_xform * _global_pose(idx_hips)).origin
+	var hp := (skel_xform * _global_pose(idx_hips)).origin
 	# DebugDraw3D.draw_line(hp, hp + fwd * 0.4, Color.GREEN)
 	# DebugDraw3D.draw_line(hp, hp + right * 0.3, Color.RED)
 	# DebugDraw3D.draw_line(hp, hp + Vector3.UP * 0.3, Color.BLUE)
@@ -607,7 +640,7 @@ func _check_if_reach(bone_idx: int, ray_target: Transform3D) -> bool:
 	var local_bone_pose := skeleton.get_bone_global_pose(bone_idx)
 	var global_bone_pos := skeleton.to_global(local_bone_pose.origin)
 
-	if global_bone_pos.distance_squared_to(ray_target.origin) > 0.000001:
+	if global_bone_pos.distance_squared_to(ray_target.origin) > 0.1:
 		return false
 		
 	return true
